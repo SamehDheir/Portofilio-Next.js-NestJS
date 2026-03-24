@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFiles,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,7 +20,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import * as fs from 'fs';
 
-
+@ApiTags('Projects')
 @Controller('projects')
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
@@ -34,6 +35,7 @@ export class ProjectsController {
     return this.projectsService.findOne(id);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post()
   @UseInterceptors(
@@ -66,6 +68,7 @@ export class ProjectsController {
     return this.projectsService.create(projectData, req.user.userId);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   @UseInterceptors(
@@ -84,27 +87,28 @@ export class ProjectsController {
     }),
   )
   async update(
-  @Param('id') id: string,
-  @Body() updateProjectDto: any,
-  @UploadedFiles() files: Express.Multer.File[]
-) {
-  try {
-    await this.projectsService.findOne(id);
+    @Param('id') id: string,
+    @Body() updateProjectDto: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    try {
+      await this.projectsService.findOne(id);
 
-    let updateData = { ...updateProjectDto };
-    if (files && files.length > 0) {
-      updateData.images = files.map(file => `/uploads/${file.filename}`);
-    }
+      let updateData = { ...updateProjectDto };
+      if (files && files.length > 0) {
+        updateData.images = files.map((file) => `/uploads/${file.filename}`);
+      }
 
-    return await this.projectsService.update(id, updateData);
-  } catch (error) {
-    if (files && files.length > 0) {
-      files.forEach(file => fs.unlinkSync(file.path));
+      return await this.projectsService.update(id, updateData);
+    } catch (error) {
+      if (files && files.length > 0) {
+        files.forEach((file) => fs.unlinkSync(file.path));
+      }
+      throw error;
     }
-    throw error; 
   }
-}
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
